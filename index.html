@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>手書き数字認識テスト</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tensorflow/4.17.0/tf.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap');
+
+  :root {
+    --bg: #fdf6ec;
+    --card: #ffffff;
+    --primary: #ff7043;
+    --primary-light: #ffccbc;
+    --secondary: #42a5f5;
+    --secondary-light: #bbdefb;
+    --accent: #66bb6a;
+    --text: #3e2723;
+    --text-light: #8d6e63;
+    --shadow: 0 8px 32px rgba(62,39,35,0.10);
+    --radius: 24px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    font-family: 'M PLUS Rounded 1c', 'Nunito', sans-serif;
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 32px 16px;
+  }
+
+  h1 {
+    font-size: 2rem;
+    font-weight: 900;
+    color: var(--primary);
+    letter-spacing: -0.5px;
+    margin-bottom: 4px;
+    text-align: center;
+  }
+  .subtitle {
+    color: var(--text-light);
+    font-size: 0.95rem;
+    margin-bottom: 32px;
+    text-align: center;
+  }
+
+  .card {
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 28px 24px;
+    width: 100%;
+    max-width: 540px;
+    margin-bottom: 24px;
+  }
+
+  .card-title {
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: var(--text-light);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 16px;
+  }
+
+  /* ── Canvas area ── */
+  .canvas-wrap {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+
+  #drawCanvas {
+    border: 3px solid var(--primary-light);
+    border-radius: 16px;
+    background: #1a1a2e;
+    cursor: crosshair;
+    touch-action: none;
+    width: 100%;
+    max-width: 480px;
+    height: 200px;
+    display: block;
+  }
+
+  .canvas-hint {
+    font-size: 0.82rem;
+    color: var(--text-light);
+    text-align: center;
+  }
+
+  /* ── Buttons ── */
+  .btn-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-top: 12px;
+  }
+
+  button {
+    font-family: inherit;
+    font-weight: 800;
+    border: none;
+    border-radius: 50px;
+    padding: 10px 22px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: transform .12s, box-shadow .12s;
+  }
+  button:active { transform: scale(0.96); }
+
+  .btn-clear {
+    background: #fce4ec;
+    color: #c62828;
+  }
+  .btn-clear:hover { background: #f8bbd0; }
+
+  .btn-recognize {
+    background: var(--primary);
+    color: #fff;
+    box-shadow: 0 4px 16px rgba(255,112,67,0.35);
+  }
+  .btn-recognize:hover { background: #f4511e; }
+  .btn-recognize:disabled { background: #ccc; box-shadow: none; cursor: not-allowed; }
+
+  /* ── Digit separator line ── */
+  #separatorLine {
+    position: absolute;
+    top: 0;
+    width: 2px;
+    background: rgba(255,255,100,0.45);
+    pointer-events: none;
+    display: none;
+    height: 200px;
+    border-radius: 2px;
+  }
+
+  /* ── Results ── */
+  .result-area {
+    margin-top: 8px;
+    min-height: 80px;
+  }
+
+  .result-digits {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+
+  .digit-box {
+    background: linear-gradient(135deg, var(--primary-light), var(--secondary-light));
+    border-radius: 16px;
+    padding: 12px 20px;
+    text-align: center;
+    min-width: 90px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+  }
+  .digit-box .digit-label {
+    font-size: 0.72rem;
+    color: var(--text-light);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+  }
+  .digit-box .digit-value {
+    font-size: 2.8rem;
+    font-weight: 900;
+    color: var(--primary);
+    line-height: 1;
+    margin: 4px 0 2px;
+  }
+  .digit-box .digit-conf {
+    font-size: 0.75rem;
+    color: var(--text-light);
+  }
+
+  .result-combined {
+    text-align: center;
+    font-size: 1.1rem;
+    color: var(--text-light);
+  }
+  .result-combined span {
+    font-size: 2rem;
+    font-weight: 900;
+    color: var(--secondary);
+    margin-left: 8px;
+  }
+
+  /* ── Status / loading ── */
+  #status {
+    text-align: center;
+    font-size: 0.88rem;
+    color: var(--text-light);
+    margin-top: 6px;
+    min-height: 20px;
+  }
+  .loading-dot {
+    display: inline-block;
+    animation: blink 1s infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+  /* ── Mode selector ── */
+  .mode-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+  .mode-btn {
+    flex: 1;
+    min-width: 120px;
+    padding: 8px 12px;
+    border-radius: 12px;
+    font-size: 0.88rem;
+    font-weight: 700;
+    background: #f5f5f5;
+    color: var(--text-light);
+    transition: background .15s, color .15s;
+    border: 2px solid transparent;
+  }
+  .mode-btn.active {
+    background: var(--primary-light);
+    color: var(--primary);
+    border-color: var(--primary);
+  }
+
+  /* ── Debug thumbnails ── */
+  .debug-row {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 12px;
+  }
+  .debug-thumb {
+    text-align: center;
+  }
+  .debug-thumb canvas {
+    border-radius: 8px;
+    border: 2px solid var(--primary-light);
+    image-rendering: pixelated;
+    width: 56px;
+    height: 56px;
+  }
+  .debug-thumb p {
+    font-size: 0.7rem;
+    color: var(--text-light);
+    margin-top: 3px;
+  }
+
+  /* ── Bar chart ── */
+  .bar-chart {
+    display: flex;
+    align-items: flex-end;
+    gap: 4px;
+    height: 50px;
+    margin-top: 10px;
+    justify-content: center;
+  }
+  .bar-col { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  .bar { width: 24px; background: var(--primary-light); border-radius: 4px 4px 0 0; transition: height .3s; }
+  .bar.top { background: var(--primary); }
+  .bar-label { font-size: 0.62rem; color: var(--text-light); font-weight: 700; }
+
+  footer {
+    color: var(--text-light);
+    font-size: 0.78rem;
+    text-align: center;
+    margin-top: 8px;
+  }
+</style>
+</head>
+<body>
+
+<h1>✏️ 手書き数字認識</h1>
+<p class="subtitle">MNISTモデル × TensorFlow.js — 1〜2桁対応テスト</p>
+
+<div class="card">
+  <div class="card-title">モード選択</div>
+  <div class="mode-row">
+    <button class="mode-btn active" id="modeOne" onclick="setMode('one')">１文字モード</button>
+    <button class="mode-btn" id="modeTwo" onclick="setMode('two')">２文字モード（縦分割）</button>
+  </div>
+
+  <div class="canvas-wrap">
+    <canvas id="drawCanvas" width="480" height="200"></canvas>
+    <div id="separatorLine"></div>
+    <p class="canvas-hint" id="canvasHint">数字を大きく書いてください（左半分に１桁目）</p>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn-clear" onclick="clearCanvas()">🗑 消す</button>
+    <button class="btn-recognize" id="recBtn" onclick="recognize()" disabled>🔍 認識する</button>
+  </div>
+  <div id="status">モデルを読み込み中 <span class="loading-dot">●</span><span class="loading-dot" style="animation-delay:.33s">●</span><span class="loading-dot" style="animation-delay:.66s">●</span></div>
+</div>
+
+<div class="card">
+  <div class="card-title">認識結果</div>
+  <div class="result-area" id="resultArea">
+    <p style="color:var(--text-light);text-align:center;font-size:0.9rem;">まだ認識していません</p>
+  </div>
+</div>
+
+<div class="card" id="debugCard" style="display:none">
+  <div class="card-title">デバッグ（モデル入力プレビュー）</div>
+  <div class="debug-row" id="debugRow"></div>
+</div>
+
+<footer>TensorFlow.js + MNIST CNN — テストページ</footer>
+
+<script>
+// ══════════════════════════════════════════════
+// State
+// ══════════════════════════════════════════════
+let model = null;
+let mode = 'one'; // 'one' | 'two'
+let isDrawing = false;
+let lastX = 0, lastY = 0;
+
+const canvas = document.getElementById('drawCanvas');
+const ctx = canvas.getContext('2d');
+const statusEl = document.getElementById('status');
+const recBtn = document.getElementById('recBtn');
+const resultArea = document.getElementById('resultArea');
+const separatorLine = document.getElementById('separatorLine');
+const debugCard = document.getElementById('debugCard');
+const debugRow = document.getElementById('debugRow');
+
+// Canvas actual pixel size
+const CW = 480, CH = 200;
+canvas.width = CW;
+canvas.height = CH;
+
+// ══════════════════════════════════════════════
+// Model loading — MNIST CNN from tfhub / GitHub
+// ══════════════════════════════════════════════
+// We build & load weights from a pre-trained MNIST JSON model
+// hosted on GitHub (Bensonin/MNIST-tfjs or similar public repos).
+// Fallback: build a tiny net and show a warning.
+
+async function loadModel() {
+  setStatus('MNISTモデルを読み込み中...');
+  try {
+    // Try loading from a public TFJS MNIST model (GraphModel format)
+    // Several open repos publish this. We use the one from:
+    // https://github.com/aaroncherian/tfjs-mnist
+    model = await tf.loadLayersModel(
+      'https://raw.githubusercontent.com/aaroncherian/tfjs_mnist/main/model/model.json'
+    );
+    setStatus('✅ モデル読み込み完了！数字を書いてみましょう');
+    recBtn.disabled = false;
+  } catch(e) {
+    console.warn('Primary model failed, trying fallback...', e);
+    try {
+      model = await tf.loadLayersModel(
+        'https://raw.githubusercontent.com/Qengineering/MNIST-TensorFlow.js/main/model/model.json'
+      );
+      setStatus('✅ モデル読み込み完了（fallback）');
+      recBtn.disabled = false;
+    } catch(e2) {
+      console.warn('Fallback also failed, building local model...', e2);
+      await buildLocalModel();
+    }
+  }
+}
+
+// If CDN fails: build a simple CNN and note it's not pretrained
+async function buildLocalModel() {
+  setStatus('⚠️ CDN読み込み失敗。ローカルモデル（未学習）で動作します', 'warn');
+  model = tf.sequential();
+  model.add(tf.layers.conv2d({ inputShape:[28,28,1], filters:8, kernelSize:3, activation:'relu' }));
+  model.add(tf.layers.maxPooling2d({ poolSize:2 }));
+  model.add(tf.layers.flatten());
+  model.add(tf.layers.dense({ units:10, activation:'softmax' }));
+  model.compile({ optimizer:'adam', loss:'categoricalCrossentropy', metrics:['accuracy'] });
+  recBtn.disabled = false;
+  setStatus('⚠️ 未学習モデル（CDN接続失敗）— 結果は参考値のみ', 'warn');
+}
+
+// ══════════════════════════════════════════════
+// Mode
+// ══════════════════════════════════════════════
+function setMode(m) {
+  mode = m;
+  document.getElementById('modeOne').classList.toggle('active', m === 'one');
+  document.getElementById('modeTwo').classList.toggle('active', m === 'two');
+  updateSeparator();
+  clearCanvas();
+  const hint = document.getElementById('canvasHint');
+  hint.textContent = m === 'one'
+    ? '数字を大きく１つ書いてください'
+    : '左半分に１桁目、右半分に２桁目を書いてください';
+}
+
+function updateSeparator() {
+  const line = document.getElementById('separatorLine');
+  if (mode === 'two') {
+    line.style.display = 'block';
+    // Position at 50% of the rendered canvas
+    const rect = canvas.getBoundingClientRect();
+    line.style.left = (canvas.offsetLeft + canvas.offsetWidth / 2) + 'px';
+    line.style.top = canvas.offsetTop + 'px';
+    line.style.height = canvas.offsetHeight + 'px';
+  } else {
+    line.style.display = 'none';
+  }
+}
+
+// ══════════════════════════════════════════════
+// Drawing
+// ══════════════════════════════════════════════
+function initCanvas() {
+  ctx.fillStyle = '#1a1a2e';
+  ctx.fillRect(0, 0, CW, CH);
+}
+
+function getPos(e) {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = CW / rect.width;
+  const scaleY = CH / rect.height;
+  if (e.touches) {
+    return {
+      x: (e.touches[0].clientX - rect.left) * scaleX,
+      y: (e.touches[0].clientY - rect.top) * scaleY
+    };
+  }
+  return {
+    x: (e.clientX - rect.left) * scaleX,
+    y: (e.clientY - rect.top) * scaleY
+  };
+}
+
+canvas.addEventListener('mousedown', e => { isDrawing = true; const p = getPos(e); lastX = p.x; lastY = p.y; });
+canvas.addEventListener('mousemove', e => { if (!isDrawing) return; draw(e); });
+canvas.addEventListener('mouseup', () => isDrawing = false);
+canvas.addEventListener('mouseleave', () => isDrawing = false);
+canvas.addEventListener('touchstart', e => { e.preventDefault(); isDrawing = true; const p = getPos(e); lastX = p.x; lastY = p.y; });
+canvas.addEventListener('touchmove', e => { e.preventDefault(); if (!isDrawing) return; draw(e); });
+canvas.addEventListener('touchend', () => isDrawing = false);
+
+function draw(e) {
+  const p = getPos(e);
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 18;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  ctx.moveTo(lastX, lastY);
+  ctx.lineTo(p.x, p.y);
+  ctx.stroke();
+  lastX = p.x; lastY = p.y;
+}
+
+function clearCanvas() {
+  initCanvas();
+  resultArea.innerHTML = '<p style="color:var(--text-light);text-align:center;font-size:0.9rem;">まだ認識していません</p>';
+  debugCard.style.display = 'none';
+  debugRow.innerHTML = '';
+}
+
+// ══════════════════════════════════════════════
+// Preprocessing: canvas region → 28×28 tensor
+// ══════════════════════════════════════════════
+function regionTo28x28(x, y, w, h) {
+  // Extract ImageData from the canvas region
+  const offscreen = document.createElement('canvas');
+  offscreen.width = 28; offscreen.height = 28;
+  const octx = offscreen.getContext('2d');
+
+  // Find bounding box of drawn strokes within region
+  const imgData = ctx.getImageData(x, y, w, h);
+  let minX = w, minY = h, maxX = 0, maxY = 0;
+  for (let row = 0; row < h; row++) {
+    for (let col = 0; col < w; col++) {
+      const alpha = imgData.data[(row * w + col) * 4 + 3];
+      const r = imgData.data[(row * w + col) * 4];
+      // White pixels (drawn strokes on dark bg)
+      if (r > 100) {
+        if (col < minX) minX = col;
+        if (col > maxX) maxX = col;
+        if (row < minY) minY = row;
+        if (row > maxY) maxY = row;
+      }
+    }
+  }
+
+  if (maxX <= minX || maxY <= minY) {
+    // Nothing drawn in this region
+    return null;
+  }
+
+  // Add padding
+  const pad = 4;
+  minX = Math.max(0, minX - pad);
+  minY = Math.max(0, minY - pad);
+  maxX = Math.min(w - 1, maxX + pad);
+  maxY = Math.min(h - 1, maxY + pad);
+
+  const srcW = maxX - minX;
+  const srcH = maxY - minY;
+  const size = Math.max(srcW, srcH);
+
+  // Draw centered onto 20×20, then pad to 28×28 (MNIST style)
+  const tmpCanvas = document.createElement('canvas');
+  tmpCanvas.width = 20; tmpCanvas.height = 20;
+  const tmpCtx = tmpCanvas.getContext('2d');
+  tmpCtx.fillStyle = 'black';
+  tmpCtx.fillRect(0, 0, 20, 20);
+  tmpCtx.drawImage(canvas,
+    x + minX, y + minY, srcW, srcH,
+    (20 - srcW * 20 / size) / 2, (20 - srcH * 20 / size) / 2,
+    srcW * 20 / size, srcH * 20 / size
+  );
+
+  octx.fillStyle = 'black';
+  octx.fillRect(0, 0, 28, 28);
+  octx.drawImage(tmpCanvas, 4, 4, 20, 20);
+
+  return offscreen;
+}
+
+// ══════════════════════════════════════════════
+// Recognition
+// ══════════════════════════════════════════════
+async function recognize() {
+  if (!model) return;
+  recBtn.disabled = true;
+  setStatus('認識中...');
+  debugCard.style.display = 'block';
+  debugRow.innerHTML = '';
+
+  let regions = [];
+  if (mode === 'one') {
+    regions = [{ x: 0, y: 0, w: CW, h: CH, label: '１文字目' }];
+  } else {
+    const half = Math.floor(CW / 2);
+    regions = [
+      { x: 0,    y: 0, w: half,      h: CH, label: '１桁目（左）' },
+      { x: half, y: 0, w: CW - half, h: CH, label: '２桁目（右）' }
+    ];
+  }
+
+  const predictions = [];
+
+  for (const region of regions) {
+    const thumb = regionTo28x28(region.x, region.y, region.w, region.h);
+    if (!thumb) {
+      predictions.push(null);
+      // Show empty debug
+      addDebugThumb(null, region.label);
+      continue;
+    }
+    addDebugThumb(thumb, region.label);
+
+    const tensor = tf.tidy(() => {
+      const imgTensor = tf.browser.fromPixels(thumb, 1)
+        .toFloat()
+        .div(255.0)
+        .reshape([1, 28, 28, 1]);
+      return imgTensor;
+    });
+
+    const pred = await model.predict(tensor).data();
+    tensor.dispose();
+
+    const probs = Array.from(pred);
+    const digit = probs.indexOf(Math.max(...probs));
+    const conf = (Math.max(...probs) * 100).toFixed(1);
+    predictions.push({ digit, conf, probs });
+  }
+
+  renderResults(predictions, regions);
+  recBtn.disabled = false;
+  setStatus('認識完了！');
+}
+
+function addDebugThumb(thumbCanvas, label) {
+  const wrap = document.createElement('div');
+  wrap.className = 'debug-thumb';
+  if (thumbCanvas) {
+    const c = document.createElement('canvas');
+    c.width = 28; c.height = 28;
+    c.getContext('2d').drawImage(thumbCanvas, 0, 0);
+    wrap.appendChild(c);
+  } else {
+    const c = document.createElement('canvas');
+    c.width = 28; c.height = 28;
+    const cx = c.getContext('2d');
+    cx.fillStyle = '#222';
+    cx.fillRect(0,0,28,28);
+    cx.fillStyle = '#888';
+    cx.font = '10px sans-serif';
+    cx.fillText('空', 6, 18);
+    wrap.appendChild(c);
+  }
+  const p = document.createElement('p');
+  p.textContent = label;
+  wrap.appendChild(p);
+  debugRow.appendChild(wrap);
+}
+
+function renderResults(predictions, regions) {
+  resultArea.innerHTML = '';
+
+  const digitRow = document.createElement('div');
+  digitRow.className = 'result-digits';
+
+  const validPreds = predictions.filter(Boolean);
+
+  predictions.forEach((pred, i) => {
+    const box = document.createElement('div');
+    box.className = 'digit-box';
+    if (!pred) {
+      box.innerHTML = `<div class="digit-label">${regions[i].label}</div>
+        <div class="digit-value" style="color:#ccc">—</div>
+        <div class="digit-conf">未記入</div>`;
+    } else {
+      box.innerHTML = `<div class="digit-label">${regions[i].label}</div>
+        <div class="digit-value">${pred.digit}</div>
+        <div class="digit-conf">確信度 ${pred.conf}%</div>`;
+      // Mini bar chart
+      const chart = document.createElement('div');
+      chart.className = 'bar-chart';
+      const maxP = Math.max(...pred.probs);
+      pred.probs.forEach((p, d) => {
+        const col = document.createElement('div');
+        col.className = 'bar-col';
+        const bar = document.createElement('div');
+        bar.className = 'bar' + (p === maxP ? ' top' : '');
+        bar.style.height = Math.max(3, Math.round(p * 50)) + 'px';
+        const lbl = document.createElement('div');
+        lbl.className = 'bar-label';
+        lbl.textContent = d;
+        col.appendChild(bar);
+        col.appendChild(lbl);
+        chart.appendChild(col);
+      });
+      box.appendChild(chart);
+    }
+    digitRow.appendChild(box);
+  });
+
+  resultArea.appendChild(digitRow);
+
+  // Combined number
+  if (mode === 'two' && validPreds.length > 0) {
+    const combined = document.createElement('div');
+    combined.className = 'result-combined';
+    const nums = predictions.map(p => p ? String(p.digit) : '?').join('');
+    combined.innerHTML = `認識した数字：<span>${nums}</span>`;
+    resultArea.appendChild(combined);
+  }
+}
+
+// ══════════════════════════════════════════════
+// Helpers
+// ══════════════════════════════════════════════
+function setStatus(msg, type) {
+  statusEl.style.color = type === 'warn' ? '#e65100' : 'var(--text-light)';
+  statusEl.textContent = msg;
+}
+
+// ══════════════════════════════════════════════
+// Init
+// ══════════════════════════════════════════════
+initCanvas();
+loadModel();
+window.addEventListener('resize', updateSeparator);
+updateSeparator();
+</script>
+</body>
+</html>
