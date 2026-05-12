@@ -6,11 +6,11 @@
 <title>手書き数字認識テスト</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/tensorflow/4.17.0/tf.min.js"></script>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;800&family=Nunito:wght@800;900&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap');
   :root {
-    --bg:#fdf6ec; --card:#fff; --primary:#ff7043; --primary-l:#ffccbc;
-    --sec:#42a5f5; --sec-l:#bbdefb; --text:#3e2723; --muted:#8d6e63;
-    --green:#43a047; --shadow:0 8px 32px rgba(62,39,35,.10); --r:20px;
+    --bg:#fdf6ec;--card:#fff;--primary:#ff7043;--primary-l:#ffccbc;
+    --sec:#42a5f5;--sec-l:#bbdefb;--text:#3e2723;--muted:#8d6e63;
+    --green:#43a047;--shadow:0 8px 32px rgba(62,39,35,.10);--r:20px;
   }
   *{box-sizing:border-box;margin:0;padding:0}
   body{background:var(--bg);font-family:'M PLUS Rounded 1c',sans-serif;color:var(--text);
@@ -19,66 +19,71 @@
   .sub{color:var(--muted);font-size:.88rem;text-align:center;margin-bottom:24px}
   .card{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);
         padding:24px 20px;width:100%;max-width:520px;margin-bottom:18px}
-  .ctitle{font-size:.85rem;font-weight:800;color:var(--muted);text-transform:uppercase;
+  .ctitle{font-size:.82rem;font-weight:800;color:var(--muted);text-transform:uppercase;
           letter-spacing:1px;margin-bottom:14px}
 
+  /* train */
   #trainBox{background:#f9f9f9;border-radius:14px;padding:16px;text-align:center}
-  #trainMsg{font-size:.95rem;font-weight:700;color:var(--text);margin-bottom:10px}
-  #trainBar{width:100%;height:14px;border-radius:99px;background:#eee;overflow:hidden;margin-bottom:8px}
+  #trainMsg{font-size:.95rem;font-weight:700;margin-bottom:10px}
+  #trainBar{width:100%;height:12px;border-radius:99px;background:#e0e0e0;overflow:hidden;margin-bottom:8px}
   #trainFill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--primary),var(--sec));
-             width:0%;transition:width .3s}
-  #trainDetail{font-size:.78rem;color:var(--muted)}
+             width:0%;transition:width .4s}
+  #trainDetail{font-size:.75rem;color:var(--muted)}
   .btn-train{background:var(--primary);color:#fff;border:none;border-radius:50px;
-             padding:10px 26px;font-family:inherit;font-size:1rem;font-weight:800;
+             padding:10px 28px;font-family:inherit;font-size:1rem;font-weight:800;
              cursor:pointer;box-shadow:0 4px 14px rgba(255,112,67,.35);
-             transition:transform .1s,background .15s;margin-top:12px}
-  .btn-train:hover{background:#f4511e}
-  .btn-train:active{transform:scale(.96)}
+             transition:transform .1s;margin-top:12px}
+  .btn-train:hover{background:#f4511e}.btn-train:active{transform:scale(.96)}
   .btn-train:disabled{background:#ccc;box-shadow:none;cursor:not-allowed}
-  .acc-badge{display:inline-block;background:#e8f5e9;color:var(--green);
-             font-weight:800;border-radius:99px;padding:4px 14px;font-size:.88rem;margin-top:8px}
+  .badge{display:inline-block;background:#e8f5e9;color:var(--green);font-weight:800;
+         border-radius:99px;padding:4px 16px;font-size:.88rem;margin-top:8px}
 
-  .mode-row{display:flex;gap:8px;margin-bottom:14px}
-  .mbtn{flex:1;padding:8px 10px;border-radius:12px;font-size:.85rem;font-weight:700;
+  /* mode */
+  .mrow{display:flex;gap:8px;margin-bottom:14px}
+  .mbtn{flex:1;padding:8px;border-radius:12px;font-size:.85rem;font-weight:700;
         background:#f5f5f5;color:var(--muted);border:2px solid transparent;
         font-family:inherit;cursor:pointer;transition:all .15s}
   .mbtn.on{background:var(--primary-l);color:var(--primary);border-color:var(--primary)}
 
+  /* canvas */
   .cwrap{position:relative;display:flex;flex-direction:column;align-items:center;gap:10px}
   #drawCanvas{border:3px solid var(--primary-l);border-radius:14px;background:#1a1a2e;
                cursor:crosshair;touch-action:none;width:100%;max-width:480px;height:200px;display:block}
   .chint{font-size:.8rem;color:var(--muted);text-align:center}
-  #sepLine{position:absolute;top:0;width:2px;background:rgba(255,255,100,.5);
+  #sepLine{position:absolute;top:0;width:2px;background:rgba(255,255,80,.6);
            pointer-events:none;display:none;border-radius:2px}
 
+  /* buttons */
   .brow{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:10px}
-  button.bclear{background:#fce4ec;color:#c62828;border:none;border-radius:50px;
-                padding:9px 20px;font-family:inherit;font-weight:800;font-size:.95rem;cursor:pointer}
-  button.brec{background:var(--primary);color:#fff;border:none;border-radius:50px;
-              padding:9px 22px;font-family:inherit;font-weight:800;font-size:.95rem;cursor:pointer;
-              box-shadow:0 4px 14px rgba(255,112,67,.35)}
-  button.brec:disabled{background:#ccc;box-shadow:none;cursor:not-allowed}
+  .bclear{background:#fce4ec;color:#c62828;border:none;border-radius:50px;
+          padding:9px 20px;font-family:inherit;font-weight:800;font-size:.95rem;cursor:pointer}
+  .brec{background:var(--primary);color:#fff;border:none;border-radius:50px;
+        padding:9px 22px;font-family:inherit;font-weight:800;font-size:.95rem;cursor:pointer;
+        box-shadow:0 4px 14px rgba(255,112,67,.35)}
+  .brec:disabled{background:#ccc;box-shadow:none;cursor:not-allowed}
   #status{text-align:center;font-size:.82rem;color:var(--muted);margin-top:6px;min-height:18px}
 
+  /* results */
   .drow{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-bottom:10px}
   .dbox{background:linear-gradient(135deg,var(--primary-l),var(--sec-l));border-radius:14px;
         padding:10px 18px;text-align:center;min-width:88px}
-  .dlbl{font-size:.68rem;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.8px}
+  .dlbl{font-size:.66rem;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.8px}
   .dval{font-size:2.6rem;font-weight:900;color:var(--primary);line-height:1;margin:3px 0 2px}
   .dconf{font-size:.72rem;color:var(--muted)}
-  .dcomb{text-align:center;font-size:1rem;color:var(--muted)}
+  .dcomb{text-align:center;color:var(--muted)}
   .dcomb span{font-size:1.8rem;font-weight:900;color:var(--sec);margin-left:8px}
-  .barchart{display:flex;align-items:flex-end;gap:3px;height:44px;margin-top:8px;justify-content:center}
+  .bchart{display:flex;align-items:flex-end;gap:3px;height:44px;margin-top:8px;justify-content:center}
   .bcol{display:flex;flex-direction:column;align-items:center;gap:2px}
   .bar{width:20px;background:var(--primary-l);border-radius:3px 3px 0 0;transition:height .3s}
   .bar.top{background:var(--primary)}
   .blbl{font-size:.58rem;color:var(--muted);font-weight:700}
 
-  .dbrow{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:10px}
-  .dbthumb{text-align:center}
-  .dbthumb canvas{border-radius:6px;border:2px solid var(--primary-l);
-                  image-rendering:pixelated;width:56px;height:56px}
-  .dbthumb p{font-size:.68rem;color:var(--muted);margin-top:3px}
+  /* debug */
+  .dbrow{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+  .dbth{text-align:center}
+  .dbth canvas{border-radius:6px;border:2px solid var(--primary-l);
+               image-rendering:pixelated;width:56px;height:56px}
+  .dbth p{font-size:.68rem;color:var(--muted);margin-top:3px}
 
   footer{color:var(--muted);font-size:.75rem;text-align:center;margin-top:6px}
 </style>
@@ -90,16 +95,16 @@
 <div class="card">
   <div class="ctitle">① モデルの準備</div>
   <div id="trainBox">
-    <div id="trainMsg">「学習開始」を押すとブラウザ内でMNISTモデルを学習します</div>
+    <div id="trainMsg">「学習開始」でブラウザ内にMNISTモデルを学習します</div>
     <div id="trainBar"><div id="trainFill"></div></div>
-    <div id="trainDetail">初回のみ約2〜3分かかります。次回以降はキャッシュから即起動します。</div>
+    <div id="trainDetail">初回のみ約1〜2分。次回はIndexedDBキャッシュから即起動します。</div>
     <button class="btn-train" id="trainBtn" onclick="startTraining()">🚀 学習開始</button>
   </div>
 </div>
 
 <div class="card">
   <div class="ctitle">② 数字を書く</div>
-  <div class="mode-row">
+  <div class="mrow">
     <button class="mbtn on" id="m1" onclick="setMode('one')">１文字モード</button>
     <button class="mbtn"    id="m2" onclick="setMode('two')">２文字モード</button>
   </div>
@@ -125,42 +130,84 @@
   <div class="dbrow" id="dbRow"></div>
 </div>
 
-<footer>TensorFlow.js 4.17 — ブラウザ内学習 + IndexedDB キャッシュ</footer>
+<footer>TensorFlow.js 4.17 — ローカルMNISTデータ + IndexedDBキャッシュ</footer>
 
 <script>
-const DB_KEY = 'indexeddb://mnist-cnn-v2';
+// ══════════════════════════════════════════════════
+// Config
+// ══════════════════════════════════════════════════
+const DB_KEY  = 'indexeddb://mnist-cnn-v3';
+const IMG_URL = './data/mnist_images.png';
+const LBL_URL = './data/mnist_labels_uint8';
+const N_TOTAL = 70000;
+const N_TRAIN = 60000;
+const IMG_SIZE = 784;  // 28*28
+const N_CLASS  = 10;
+
 let model = null, mode = 'one', drawing = false, lx = 0, ly = 0;
 const canvas = document.getElementById('drawCanvas');
 const ctx = canvas.getContext('2d');
 const CW = 480, CH = 200;
 canvas.width = CW; canvas.height = CH;
 
-// ─── MNIST data URLs (gzip compressed, ubyte format) ───
-const MNIST = {
-  trainImg: 'https://storage.googleapis.com/cvdf-datasets/mnist/train-images-idx3-ubyte.gz',
-  trainLbl: 'https://storage.googleapis.com/cvdf-datasets/mnist/train-labels-idx1-ubyte.gz',
-};
+// ══════════════════════════════════════════════════
+// Data loading — ローカルファイルから (TFjs公式と同じ方式)
+// ══════════════════════════════════════════════════
+async function loadMnistData() {
+  setDetail('mnist_images.png を読み込み中...');
+  setProgress(8);
 
-async function fetchGzip(url) {
-  const r = await fetch(url);
-  if (!r.ok) throw new Error('HTTP ' + r.status + ': ' + url);
-  const ds = new DecompressionStream('gzip');
-  return new DataView(await new Response(r.body.pipeThrough(ds)).arrayBuffer());
+  // ── 画像スプライト ──
+  const img = new Image();
+  const imgReady = new Promise((resolve, reject) => {
+    img.onload  = resolve;
+    img.onerror = () => reject(new Error('mnist_images.png の読み込みに失敗しました'));
+    img.src = IMG_URL;
+  });
+
+  // ── ラベルバイナリ ──
+  const lblFetch = fetch(LBL_URL).then(r => {
+    if (!r.ok) throw new Error('mnist_labels_uint8 の読み込みに失敗しました');
+    return r.arrayBuffer();
+  });
+
+  await imgReady;
+  setProgress(30);
+  setDetail('ラベルを読み込み中...');
+  const lblBuf = await lblFetch;
+  setProgress(40);
+  setDetail('データを変換中...');
+
+  // スプライトPNGをピクセル配列に変換
+  // 形式: 幅784, 高さN_TOTAL  (各行=1枚の28x28画像)
+  const offscreen = document.createElement('canvas');
+  const chunkSize = 5000;
+  offscreen.width  = img.naturalWidth;   // 784
+  offscreen.height = chunkSize;
+  const oc = offscreen.getContext('2d');
+
+  const imgBuf = new Float32Array(N_TOTAL * IMG_SIZE);
+  for (let i = 0; i < N_TOTAL / chunkSize; i++) {
+    oc.drawImage(img, 0, i * chunkSize, img.naturalWidth, chunkSize, 0, 0, img.naturalWidth, chunkSize);
+    const pixels = oc.getImageData(0, 0, offscreen.width, chunkSize).data;
+    const view = new Float32Array(imgBuf.buffer, i * chunkSize * IMG_SIZE * 4, chunkSize * IMG_SIZE);
+    for (let j = 0; j < view.length; j++) view[j] = pixels[j * 4] / 255.0;
+  }
+
+  const lblArr = new Uint8Array(lblBuf);  // N_TOTAL * N_CLASS (one-hot)
+
+  setProgress(55);
+  return {
+    trainImgs:  imgBuf.slice(0, N_TRAIN * IMG_SIZE),
+    trainLabels: lblArr.slice(0, N_TRAIN * N_CLASS),
+    testImgs:   imgBuf.slice(N_TRAIN * IMG_SIZE),
+    testLabels:  lblArr.slice(N_TRAIN * N_CLASS),
+  };
 }
 
-function parseImages(dv) {
-  const n = dv.getUint32(4), rows = dv.getUint32(8), cols = dv.getUint32(12);
-  const arr = new Float32Array(n * rows * cols);
-  for (let i = 0; i < arr.length; i++) arr[i] = dv.getUint8(16 + i) / 255.0;
-  return { arr, n };
-}
-function parseLabels(dv) {
-  const n = dv.getUint32(4);
-  const arr = new Uint8Array(n);
-  for (let i = 0; i < n; i++) arr[i] = dv.getUint8(8 + i);
-  return arr;
-}
-
+// ══════════════════════════════════════════════════
+// Model
+// ══════════════════════════════════════════════════
 function buildModel() {
   const m = tf.sequential();
   m.add(tf.layers.conv2d({ inputShape:[28,28,1], filters:32, kernelSize:3, activation:'relu', padding:'same' }));
@@ -178,10 +225,13 @@ function buildModel() {
   m.add(tf.layers.batchNormalization());
   m.add(tf.layers.dropout({ rate:0.5 }));
   m.add(tf.layers.dense({ units:10, activation:'softmax' }));
-  m.compile({ optimizer: tf.train.adam(0.001), loss:'categoricalCrossentropy', metrics:['accuracy'] });
+  m.compile({ optimizer:tf.train.adam(0.001), loss:'categoricalCrossentropy', metrics:['accuracy'] });
   return m;
 }
 
+// ══════════════════════════════════════════════════
+// Training
+// ══════════════════════════════════════════════════
 async function startTraining() {
   document.getElementById('trainBtn').disabled = true;
 
@@ -191,49 +241,36 @@ async function startTraining() {
     model = await tf.loadLayersModel(DB_KEY);
     setMsg('✅ 保存済みモデルを読み込みました！');
     setProgress(100);
-    setDetail('IndexedDB からロード。すぐに使えます。');
-    showBadge('(キャッシュ済み)');
+    setDetail('IndexedDB からロード完了');
+    addBadge('(キャッシュ済み)');
     enableRec();
     return;
-  } catch(e) {}
+  } catch(e) { /* キャッシュなし */ }
 
-  // データ取得
-  let imgArr, lblArr;
+  // データ読み込み
+  setMsg('MNISTデータを読み込み中...');
+  let data;
   try {
-    setMsg('MNISTデータをダウンロード中...'); setProgress(5);
-    setDetail('train-images (約10MB) を取得中...');
-    const imgDV = await fetchGzip(MNIST.trainImg);
-    const imgParsed = parseImages(imgDV);
-    imgArr = imgParsed.arr;
-
-    setProgress(18);
-    setDetail('train-labels を取得中...');
-    const lblDV = await fetchGzip(MNIST.trainLbl);
-    lblArr = parseLabels(lblDV);
-    setMsg('データ取得完了。学習を開始します...');
-    setProgress(22);
+    data = await loadMnistData();
   } catch(e) {
-    setMsg('⚠️ データ取得失敗。ダミーデータでアーキテクチャ確認のみ行います。');
-    setDetail('エラー: ' + e.message);
-    // ダミーデータ（精度は出ないが構造確認用）
-    imgArr = new Float32Array(5000 * 784);
-    for(let i=0;i<imgArr.length;i++) imgArr[i]=Math.random()*0.3;
-    lblArr = new Uint8Array(5000);
-    for(let i=0;i<5000;i++) lblArr[i]=i%10;
+    setMsg('❌ データ読み込み失敗');
+    setDetail(e.message + ' — data/ フォルダが正しく配置されているか確認してください');
+    document.getElementById('trainBtn').disabled = false;
+    return;
   }
 
-  const N = lblArr.length;
-  const xs = tf.tensor4d(imgArr.slice(0, N*784), [N,28,28,1]);
-  const ys = tf.oneHot(tf.tensor1d(Array.from(lblArr).slice(0,N),'int32'),10).toFloat();
+  setMsg('モデルを学習中...');
+  const EPOCHS = 8, BATCH = 256;
+  const N = N_TRAIN;
+  const xs = tf.tensor4d(data.trainImgs, [N, 28, 28, 1]);
+  const ys = tf.tensor2d(data.trainLabels, [N, N_CLASS], 'float32');
 
   model = buildModel();
-  const EPOCHS=8, BATCH=256;
-
   await model.fit(xs, ys, {
     epochs: EPOCHS, batchSize: BATCH, validationSplit: 0.1, shuffle: true,
     callbacks: {
       onEpochEnd: async (epoch, logs) => {
-        setProgress(22 + Math.round((epoch+1)/EPOCHS * 73));
+        setProgress(55 + Math.round((epoch+1)/EPOCHS * 40));
         setDetail(`Epoch ${epoch+1}/${EPOCHS}  val_acc: ${(logs.val_acc*100).toFixed(1)}%`);
         setMsg(`学習中... ${epoch+1} / ${EPOCHS} エポック完了`);
         await tf.nextFrame();
@@ -242,52 +279,66 @@ async function startTraining() {
   });
   xs.dispose(); ys.dispose();
 
-  // 最終精度
-  const ev = model.evaluate(
-    tf.tensor4d(imgArr.slice(0,1000*784),[1000,28,28,1]),
-    tf.oneHot(tf.tensor1d(Array.from(lblArr).slice(0,1000),'int32'),10).toFloat()
-  );
-  const acc = (await ev[1].data())[0];
-  ev.forEach(t=>t.dispose());
+  // テスト精度
+  const NT = N_TOTAL - N_TRAIN;
+  const txs = tf.tensor4d(data.testImgs, [NT, 28, 28, 1]);
+  const tys = tf.tensor2d(data.testLabels, [NT, N_CLASS], 'float32');
+  const [,accT] = model.evaluate(txs, tys);
+  const acc = (await accT.data())[0];
+  txs.dispose(); tys.dispose(); accT.dispose();
 
-  try { await model.save(DB_KEY); setDetail('IndexedDB に保存しました（次回は即起動）'); }
-  catch(e) { setDetail('保存失敗（プライベートブラウズ時は毎回学習が必要です）'); }
+  // 保存
+  try {
+    await model.save(DB_KEY);
+    setDetail(`テスト精度: ${(acc*100).toFixed(1)}%  — IndexedDB に保存しました`);
+  } catch(e) {
+    setDetail(`テスト精度: ${(acc*100).toFixed(1)}%  — 保存失敗`);
+  }
 
   setProgress(100);
   setMsg('✅ 学習完了！');
-  showBadge('精度: ' + (acc*100).toFixed(1) + '%');
+  addBadge(`テスト精度: ${(acc*100).toFixed(1)}%`);
   enableRec();
 }
 
-function setMsg(t)    { document.getElementById('trainMsg').textContent=t; }
-function setDetail(t) { document.getElementById('trainDetail').textContent=t; }
-function setProgress(p){ document.getElementById('trainFill').style.width=p+'%'; }
-function showBadge(t) {
-  const el=document.createElement('div'); el.className='acc-badge'; el.textContent=t;
+function setMsg(t)    { document.getElementById('trainMsg').textContent = t; }
+function setDetail(t) { document.getElementById('trainDetail').textContent = t; }
+function setProgress(p){ document.getElementById('trainFill').style.width = p + '%'; }
+function addBadge(t)  {
+  const el = document.createElement('div'); el.className = 'badge'; el.textContent = t;
   document.getElementById('trainBox').appendChild(el);
 }
-function enableRec() {
-  document.getElementById('recBtn').disabled=false;
-  document.getElementById('status').textContent='数字を書いて「認識する」を押してください';
+function enableRec()  {
+  document.getElementById('recBtn').disabled = false;
+  document.getElementById('status').textContent = '数字を書いて「認識する」を押してください';
 }
 
-// ─── Canvas drawing ───
-function initCanvas(){ ctx.fillStyle='#1a1a2e'; ctx.fillRect(0,0,CW,CH); }
-function getPos(e){
-  const r=canvas.getBoundingClientRect(), sx=CW/r.width, sy=CH/r.height;
+// ══════════════════════════════════════════════════
+// Canvas drawing
+// ══════════════════════════════════════════════════
+function initCanvas() { ctx.fillStyle = '#1a1a2e'; ctx.fillRect(0,0,CW,CH); }
+
+function getPos(e) {
+  const r = canvas.getBoundingClientRect(), sx = CW/r.width, sy = CH/r.height;
   return e.touches
     ? {x:(e.touches[0].clientX-r.left)*sx, y:(e.touches[0].clientY-r.top)*sy}
     : {x:(e.clientX-r.left)*sx, y:(e.clientY-r.top)*sy};
 }
+function stroke(e) {
+  const p = getPos(e);
+  ctx.strokeStyle='#fff'; ctx.lineWidth=18; ctx.lineCap=ctx.lineJoin='round';
+  ctx.beginPath(); ctx.moveTo(lx,ly); ctx.lineTo(p.x,p.y); ctx.stroke();
+  lx=p.x; ly=p.y;
+}
 canvas.addEventListener('mousedown',  e=>{ drawing=true; const p=getPos(e); lx=p.x; ly=p.y; });
-canvas.addEventListener('mousemove',  e=>{ if(!drawing)return; const p=getPos(e); ctx.strokeStyle='#fff'; ctx.lineWidth=18; ctx.lineCap=ctx.lineJoin='round'; ctx.beginPath(); ctx.moveTo(lx,ly); ctx.lineTo(p.x,p.y); ctx.stroke(); lx=p.x; ly=p.y; });
+canvas.addEventListener('mousemove',  e=>{ if(drawing) stroke(e); });
 canvas.addEventListener('mouseup',    ()=>drawing=false);
 canvas.addEventListener('mouseleave', ()=>drawing=false);
 canvas.addEventListener('touchstart', e=>{ e.preventDefault(); drawing=true; const p=getPos(e); lx=p.x; ly=p.y; });
-canvas.addEventListener('touchmove',  e=>{ e.preventDefault(); if(!drawing)return; const p=getPos(e); ctx.strokeStyle='#fff'; ctx.lineWidth=18; ctx.lineCap=ctx.lineJoin='round'; ctx.beginPath(); ctx.moveTo(lx,ly); ctx.lineTo(p.x,p.y); ctx.stroke(); lx=p.x; ly=p.y; });
+canvas.addEventListener('touchmove',  e=>{ e.preventDefault(); if(drawing) stroke(e); });
 canvas.addEventListener('touchend',   ()=>drawing=false);
 
-function clearCanvas(){
+function clearCanvas() {
   initCanvas();
   document.getElementById('resultArea').innerHTML='<p style="color:var(--muted);text-align:center;font-size:.9rem">まだ認識していません</p>';
   document.getElementById('dbCard').style.display='none';
@@ -295,97 +346,112 @@ function clearCanvas(){
   document.getElementById('status').textContent='';
 }
 
-// ─── Mode ───
-function setMode(m){
-  mode=m;
-  document.getElementById('m1').classList.toggle('on',m==='one');
-  document.getElementById('m2').classList.toggle('on',m==='two');
+// ══════════════════════════════════════════════════
+// Mode
+// ══════════════════════════════════════════════════
+function setMode(m) {
+  mode = m;
+  document.getElementById('m1').classList.toggle('on', m==='one');
+  document.getElementById('m2').classList.toggle('on', m==='two');
   updateSep(); clearCanvas();
-  document.getElementById('chint').textContent=m==='one'
-    ?'数字を大きく１つ書いてください'
-    :'左半分に１桁目、右半分に２桁目を書いてください';
+  document.getElementById('chint').textContent = m==='one'
+    ? '数字を大きく１つ書いてください'
+    : '左半分に１桁目、右半分に２桁目を書いてください';
 }
-function updateSep(){
-  const ln=document.getElementById('sepLine');
-  if(mode==='two'){
+function updateSep() {
+  const ln = document.getElementById('sepLine');
+  if (mode==='two') {
     ln.style.display='block';
-    ln.style.left=(canvas.offsetLeft+canvas.offsetWidth/2)+'px';
-    ln.style.top=canvas.offsetTop+'px';
-    ln.style.height=canvas.offsetHeight+'px';
+    ln.style.left = (canvas.offsetLeft + canvas.offsetWidth/2) + 'px';
+    ln.style.top  = canvas.offsetTop + 'px';
+    ln.style.height = canvas.offsetHeight + 'px';
   } else ln.style.display='none';
 }
 
-// ─── Preprocessing ───
-function regionTo28(rx,ry,rw,rh){
-  const id=ctx.getImageData(rx,ry,rw,rh);
+// ══════════════════════════════════════════════════
+// Preprocessing
+// ══════════════════════════════════════════════════
+function regionTo28(rx, ry, rw, rh) {
+  const id = ctx.getImageData(rx, ry, rw, rh);
   let mnX=rw,mnY=rh,mxX=0,mxY=0;
-  for(let row=0;row<rh;row++) for(let col=0;col<rw;col++){
-    if(id.data[(row*rw+col)*4]>80){
+  for (let row=0; row<rh; row++) for (let col=0; col<rw; col++) {
+    if (id.data[(row*rw+col)*4] > 80) {
       if(col<mnX)mnX=col; if(col>mxX)mxX=col;
       if(row<mnY)mnY=row; if(row>mxY)mxY=row;
     }
   }
-  if(mxX<=mnX||mxY<=mnY) return null;
+  if (mxX<=mnX || mxY<=mnY) return null;
   const pad=5;
   mnX=Math.max(0,mnX-pad); mnY=Math.max(0,mnY-pad);
   mxX=Math.min(rw-1,mxX+pad); mxY=Math.min(rh-1,mxY+pad);
   const sw=mxX-mnX, sh=mxY-mnY, sz=Math.max(sw,sh);
+
+  // 20×20に正規化 → 28×28パディング（MNIST形式）
   const tmp=document.createElement('canvas'); tmp.width=tmp.height=20;
   const tc=tmp.getContext('2d');
   tc.fillStyle='black'; tc.fillRect(0,0,20,20);
-  tc.drawImage(canvas,rx+mnX,ry+mnY,sw,sh,(20-sw*20/sz)/2,(20-sh*20/sz)/2,sw*20/sz,sh*20/sz);
+  tc.drawImage(canvas, rx+mnX,ry+mnY,sw,sh,
+    (20-sw*20/sz)/2,(20-sh*20/sz)/2, sw*20/sz,sh*20/sz);
+
   const out=document.createElement('canvas'); out.width=out.height=28;
   const oc=out.getContext('2d');
   oc.fillStyle='black'; oc.fillRect(0,0,28,28);
-  oc.drawImage(tmp,4,4,20,20);
+  oc.drawImage(tmp, 4, 4, 20, 20);
   return out;
 }
 
-// ─── Recognition ───
-async function recognize(){
-  if(!model) return;
-  document.getElementById('recBtn').disabled=true;
-  document.getElementById('status').textContent='認識中...';
-  document.getElementById('dbCard').style.display='block';
-  document.getElementById('dbRow').innerHTML='';
+// ══════════════════════════════════════════════════
+// Recognition
+// ══════════════════════════════════════════════════
+async function recognize() {
+  if (!model) return;
+  document.getElementById('recBtn').disabled = true;
+  document.getElementById('status').textContent = '認識中...';
+  document.getElementById('dbCard').style.display = 'block';
+  document.getElementById('dbRow').innerHTML = '';
 
-  const half=Math.floor(CW/2);
-  const regions=mode==='one'
-    ?[{x:0,y:0,w:CW,h:CH,label:'１文字目'}]
-    :[{x:0,y:0,w:half,h:CH,label:'１桁目（左）'},{x:half,y:0,w:CW-half,h:CH,label:'２桁目（右）'}];
+  const half = Math.floor(CW/2);
+  const regions = mode==='one'
+    ? [{x:0, y:0, w:CW, h:CH, label:'１文字目'}]
+    : [{x:0,    y:0, w:half,     h:CH, label:'１桁目（左）'},
+       {x:half, y:0, w:CW-half,  h:CH, label:'２桁目（右）'}];
 
-  const preds=[];
-  for(const reg of regions){
-    const thumb=regionTo28(reg.x,reg.y,reg.w,reg.h);
+  const preds = [];
+  for (const reg of regions) {
+    const thumb = regionTo28(reg.x, reg.y, reg.w, reg.h);
+
     // debug thumb
-    const wrap=document.createElement('div'); wrap.className='dbthumb';
+    const wrap=document.createElement('div'); wrap.className='dbth';
     const c=document.createElement('canvas'); c.width=c.height=28;
     if(thumb) c.getContext('2d').drawImage(thumb,0,0);
-    else{ const cx=c.getContext('2d'); cx.fillStyle='#222'; cx.fillRect(0,0,28,28); cx.fillStyle='#888'; cx.font='9px sans-serif'; cx.fillText('空',7,18); }
+    else { const cx=c.getContext('2d'); cx.fillStyle='#222'; cx.fillRect(0,0,28,28); cx.fillStyle='#888'; cx.font='9px sans-serif'; cx.fillText('空',7,18); }
     const p=document.createElement('p'); p.textContent=reg.label;
     wrap.appendChild(c); wrap.appendChild(p);
     document.getElementById('dbRow').appendChild(wrap);
 
-    if(!thumb){ preds.push(null); continue; }
-    const res=await tf.tidy(()=>model.predict(tf.browser.fromPixels(thumb,1).toFloat().div(255).reshape([1,28,28,1]))).data();
-    const probs=Array.from(res);
-    const digit=probs.indexOf(Math.max(...probs));
-    preds.push({digit, conf:(Math.max(...probs)*100).toFixed(1), probs});
+    if (!thumb) { preds.push(null); continue; }
+
+    const res = await tf.tidy(() =>
+      model.predict(tf.browser.fromPixels(thumb,1).toFloat().div(255).reshape([1,28,28,1]))
+    ).data();
+    const probs = Array.from(res);
+    const digit = probs.indexOf(Math.max(...probs));
+    preds.push({ digit, conf:(Math.max(...probs)*100).toFixed(1), probs });
   }
 
-  // render
-  const area=document.getElementById('resultArea');
-  area.innerHTML='';
-  const row=document.createElement('div'); row.className='drow';
-  preds.forEach((pred,i)=>{
+  // render results
+  const area = document.getElementById('resultArea');
+  area.innerHTML = '';
+  const row = document.createElement('div'); row.className='drow';
+  preds.forEach((pred,i) => {
     const box=document.createElement('div'); box.className='dbox';
-    if(!pred){
-      box.innerHTML=`<div class="dlbl">${regions[i].label}</div><div class="dval" style="color:#ccc">—</div><div class="dconf">未記入</div>`;
+    if (!pred) {
+      box.innerHTML=`<div class="dlbl">${regions[i].label}</div><div class="dval" style="color:#bbb">—</div><div class="dconf">未記入</div>`;
     } else {
       box.innerHTML=`<div class="dlbl">${regions[i].label}</div><div class="dval">${pred.digit}</div><div class="dconf">確信度 ${pred.conf}%</div>`;
-      const chart=document.createElement('div'); chart.className='barchart';
+      const chart=document.createElement('div'); chart.className='bchart';
       const mx=Math.max(...pred.probs);
-      pred.probs.forEach((p,d)=>{
+      pred.probs.forEach((p,d) => {
         const col=document.createElement('div'); col.className='bcol';
         const bar=document.createElement('div'); bar.className='bar'+(p===mx?' top':'');
         bar.style.height=Math.max(2,Math.round(p*44))+'px';
@@ -397,17 +463,20 @@ async function recognize(){
     row.appendChild(box);
   });
   area.appendChild(row);
-  if(mode==='two'){
+
+  if (mode==='two') {
     const comb=document.createElement('div'); comb.className='dcomb';
     comb.innerHTML='認識した数字：<span>'+preds.map(p=>p?p.digit:'?').join('')+'</span>';
     area.appendChild(comb);
   }
 
-  document.getElementById('recBtn').disabled=false;
-  document.getElementById('status').textContent='認識完了！';
+  document.getElementById('recBtn').disabled = false;
+  document.getElementById('status').textContent = '認識完了！';
 }
 
-// ─── Init ───
+// ══════════════════════════════════════════════════
+// Init
+// ══════════════════════════════════════════════════
 initCanvas();
 window.addEventListener('resize', updateSep);
 updateSep();
